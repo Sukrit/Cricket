@@ -40,6 +40,8 @@ public class YamlTesting {
     	        	if(!match.getInfo().getMatch_type().equals("ODI")) {
     	        		continue;
     	        	}
+    	        	
+    	        	System.out.println("Calculating score for match "+match.getInfo().getDates());
     	        	 Map<String, Double> players = calculateScores(match);
     	             
     	             if(match.getInfo().getMatch_type().equals("ODI")) {
@@ -48,6 +50,7 @@ public class YamlTesting {
     	          		result.setCity(match.getInfo().getCity());
     	          		result.setDate(match.getInfo().getDates().get(0));
     	          		result.setWinner(match.getInfo().getOutcome().getWinner());
+    	          		result.setTeams(match.getInfo().getTeams());
     	          		results.add(result);
     	          		
     	          		printPlayers(players);
@@ -56,7 +59,7 @@ public class YamlTesting {
     	     
     	     try {
     	    	 if(writeToFile) {
-    	    		 File newFile = new File("C:\\Users\\Sukrit\\Desktop\\Cricket.json");
+    	    		 File newFile = new File("C:\\Users\\Sukrit\\Desktop\\Cricket\\Cricket.json");
     	    	     
     	    		 ObjectMapper mapper = new ObjectMapper();
 
@@ -181,7 +184,7 @@ public class YamlTesting {
 		return score;
 	}
 	
-	private static Double calculateScore(Delivery delivery, int target, Integer overNum, Integer ball) {
+	public static Double calculateScore(Delivery delivery, int target, Integer overNum, Integer ball) {
 		if (ball>6)
 			ball = 6;
 		double over = convertOver(overNum, ball);
@@ -194,10 +197,11 @@ public class YamlTesting {
 		
 		score = factor * (delivery.getRuns().getBatsman() + 1 - RR_b);
 		
-		
+		/*
 		if(delivery.getBatsman().equals("MS Dhoni")) {
 			System.out.println("Score given at "+over+" is "+score + ": RR_b is "+RR_b+" :factor is "+factor);
 		}
+		*/
 		return score;
 	}
 
