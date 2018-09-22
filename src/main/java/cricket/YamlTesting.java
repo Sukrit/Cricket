@@ -17,6 +17,8 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 public class YamlTesting {
 	
 	private static boolean writeToFile = true;
+	private static int MATCH = 0;
+	private static int NO_MATCH =0;
 	
     public static void main(String[] args) {
         //ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
@@ -41,7 +43,6 @@ public class YamlTesting {
     	        		continue;
     	        	}
     	        	
-    	        	System.out.println("Calculating score for match "+match.getInfo().getDates());
     	        	 Map<String, Double> players = calculateScores(match);
     	             
     	             if(match.getInfo().getMatch_type().equals("ODI")) {
@@ -54,6 +55,7 @@ public class YamlTesting {
     	          		results.add(result);
     	          		
     	          		printPlayers(players);
+    	          		System.out.println("Matching:"+MATCH+" Not Matching:"+NO_MATCH);
     	          		}
     	     }
     	     
@@ -133,32 +135,89 @@ public class YamlTesting {
 	
 	for(Inning inning : match.getInnings()) {
 		
-	
+		if(inning.getInningsNumber()==1)
+			continue;
+		else {
+			
+			int lastOver = 0;
+			int lastBall = 0;
 	for (Delivery delivery : inning.getDeliveries()) {
-			if(inning.getInningsNumber()==1)
-			{
+			
+			
 				/*
 				double score = calculateFirstScore(delivery, runs, delivery.getOver(), delivery.getBall());
 				players.put(delivery.getBatsman(), players.get(delivery.getBatsman()) + score);			
 				runs = runs + delivery.getRuns().getTotal();
 				firstScores = firstScores+ score;*/
-			}
-				else	
-			{
+				
+			
 				double points = calculateScore(delivery, toWin, delivery.getOver(), delivery.getBall());
 				players.put(delivery.getBatsman(), players.get(delivery.getBatsman()) + points);			
 				toWin = toWin - delivery.getRuns().getTotal();
 				secondScores = secondScores + points;
-			}	
+				lastOver = delivery.getOver();
+				lastBall = delivery.getBall();
 		
 	}
 	
+	if(inning.getDeliveries().size()<300 && toWin>0) { //penalty for not playing out full quota
+		
+		double dummyToWin = toWin;
+		double RR = dummyToWin/(50.17 - convertOver(lastOver, lastBall));
+		double RR_b = RR/6.0;
+		Double negativeSum = 0.0;
+		while(lastOver!=50) {
+			lastBall++;
+			if(lastBall>6) {
+				lastBall=1;
+				lastOver++;
+			}
+		if(lastOver==50)
+			break;
+		Delivery dummy = new Delivery();
+		Runs dummyRuns = new Runs();
+		dummyRuns.setBatsman(-1);
+		dummy.setRuns(dummyRuns);
+		double negScore = calculateScore(dummy,dummyToWin, lastOver, lastBall);
+		negativeSum = negativeSum + negScore;
+		dummyToWin = dummyToWin - RR_b;
+		}
+		secondScores = secondScores+negativeSum;
+		
+		
+		for(String playerS:players.keySet()) {
+			players.put(playerS, players.get(playerS) + negativeSum/10.0);
+		}
+	}
+	if(toWin>0) {
+		if(secondScores > 200) {
+			NO_MATCH++;
+			System.out.println("NO MATCH score is:"+secondScores);
+		}
+		else {
+			System.out.println("MATCH score is:"+secondScores);
+			MATCH++;
+		}
+	}
+	else {
+		if(secondScores > 200) 
+		{
+			System.out.println("MATCH score is:"+secondScores);
+			MATCH++;
+		}
+		else
+		{
+			System.out.println("NO MATCH score is:"+secondScores);
+			NO_MATCH++;
+		}
+	}
 	toWin = target;
 	runs = 0;
 	}
 	
-	
+	}
 	System.out.println("First inning score is "+firstScores + " Second inning score is "+secondScores);
+	
 	
 	return players;
 	
@@ -184,18 +243,18 @@ public class YamlTesting {
 		return score;
 	}
 	
-	public static Double calculateScore(Delivery delivery, int target, Integer overNum, Integer ball) {
+	public static Double calculateScore(Delivery delivery, double ToWin, Integer overNum, Integer ball) {
 		if (ball>6)
 			ball = 6;
 		double over = convertOver(overNum, ball);
 		double remaining = 50.17 - over;
-		double RR = target/remaining;
+		double RR = ToWin/remaining;
 		double RR_b = RR/6;
 		double score=0.0;
 		
 		double factor = Math.sqrt((over/14.0)+0.5);
 		
-		score = factor * (delivery.getRuns().getBatsman() + 1 - RR_b);
+		score = factor * (delivery.getRuns().getBatsman() +1 - RR_b);
 		
 		/*
 		if(delivery.getBatsman().equals("MS Dhoni")) {
