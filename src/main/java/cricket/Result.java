@@ -5,15 +5,36 @@ import java.util.Map;
 
 public class Result {
 
-	Map<String, Double> players;
+	Map<String, Score> players;
 	String date;
 	String city;
 	String winner;
 	List<String> teams;
-	public Map<String, Double> getPlayers() {
+	String id;
+	Double secondScore;
+	public Double getSecondScore() {
+		return secondScore;
+	}
+	public void setSecondScore(Double secondScore) {
+		this.secondScore = secondScore;
+	}
+	public boolean isSecondWon() {
+		return secondWon;
+	}
+	public void setSecondWon(boolean secondWon) {
+		this.secondWon = secondWon;
+	}
+	boolean secondWon;
+	public String getId() {
+		return id;
+	}
+	public void setId(String id) {
+		this.id = id;
+	}
+	public Map<String, Score> getPlayers() {
 		return players;
 	}
-	public void setPlayers(Map<String, Double> players) {
+	public void setPlayers(Map<String, Score> players) {
 		this.players = players;
 	}
 	public String getDate() {

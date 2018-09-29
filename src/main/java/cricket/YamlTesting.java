@@ -13,6 +13,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class YamlTesting {
 	
@@ -43,10 +45,12 @@ public class YamlTesting {
     	        		continue;
     	        	}
     	        	
-    	        	 Map<String, Double> players = calculateScores(match);
-    	             
+    	        	 
     	             if(match.getInfo().getMatch_type().equals("ODI")) {
-    	          		Result result  = new Result();
+    	            	Result result  = new Result();
+     	          		
+    	            	Map<String, Score> players = calculateScores(match, result); 
+    	          		result.setId(child.getName().substring(0, child.getName().lastIndexOf('.')));
     	          		result.setPlayers(players);
     	          		result.setCity(match.getInfo().getCity());
     	          		result.setDate(match.getInfo().getDates().get(0));
@@ -117,7 +121,7 @@ public class YamlTesting {
         }
     }
 
-	private static Map<String, Double> calculateScores(cricsheet match) {
+	private static Map<String, Score> calculateScores(cricsheet match, Result result) {
 	
 	int target = getTarget(match);
 	int toWin = target;
@@ -125,7 +129,7 @@ public class YamlTesting {
 	double firstScores = 0.0;
 	double secondScores = 0.0;
 	System.out.println("Target is "+target);
-	Map<String, Double> players = new HashMap<String, Double>();
+	Map<String, Score> players = new HashMap<String, Score>();
 	
 	for(Inning inning : match.getInnings()) {
 		if(inning.getInningsNumber()==2) {
@@ -152,11 +156,18 @@ public class YamlTesting {
 				
 			
 				double points = calculateScore(delivery, toWin, delivery.getOver(), delivery.getBall());
-				players.put(delivery.getBatsman(), players.get(delivery.getBatsman()) + points);			
+				players.put(delivery.getBatsman(), new Score(players.get(delivery.getBatsman()).getRuns() + points, false));			
 				toWin = toWin - delivery.getRuns().getTotal();
 				secondScores = secondScores + points;
 				lastOver = delivery.getOver();
 				lastBall = delivery.getBall();
+				Gson gson = new GsonBuilder().setPrettyPrinting().create();
+				if(delivery.getWickets()!=null) {
+					for(Wicket wicket: delivery.getWickets() ) {
+						System.out.println(gson.toJson(wicket));
+						players.put(wicket.getPlayer_out(), new Score(players.get(wicket.getPlayer_out()).getRuns() , true));
+					}
+				}
 		
 	}
 	
@@ -186,10 +197,11 @@ public class YamlTesting {
 		
 		
 		for(String playerS:players.keySet()) {
-			players.put(playerS, players.get(playerS) + negativeSum/10.0);
+			players.put(playerS, new Score(players.get(playerS).getRuns() + negativeSum/10.0, players.get(playerS).isOut()));
 		}
 	}
 	if(toWin>0) {
+		result.setSecondWon(false);
 		if(secondScores > 200) {
 			NO_MATCH++;
 			System.out.println("NO MATCH score is:"+secondScores);
@@ -200,6 +212,7 @@ public class YamlTesting {
 		}
 	}
 	else {
+		result.setSecondWon(true);
 		if(secondScores > 200) 
 		{
 			System.out.println("MATCH score is:"+secondScores);
@@ -218,6 +231,7 @@ public class YamlTesting {
 	}
 	System.out.println("First inning score is "+firstScores + " Second inning score is "+secondScores);
 	
+	result.setSecondScore(secondScores);
 	
 	return players;
 	
@@ -264,7 +278,7 @@ public class YamlTesting {
 		return score;
 	}
 
-	private static void printPlayers(Map<String, Double> players) {
+	private static void printPlayers(Map<String, Score> players) {
 		System.out.println(Arrays.asList(players)); 
 	}
 
@@ -272,11 +286,19 @@ public class YamlTesting {
 		return (over + ball/6.0);
 	}
 
-	private static void populatePlayers(Map<String, Double> players, Inning inning) {
+	private static void populatePlayers(Map<String, Score> players, Inning inning) {
 		
 		for (Delivery delivery : inning.getDeliveries()) {
 			if(!players.containsKey(delivery.getBatsman())) {
-				players.put(delivery.getBatsman(), new Double(0.0));
+				players.put(delivery.getBatsman(), new Score(new Double(0.0), false));
+			}
+			
+			if(delivery.getWickets()!=null) {
+				for(Wicket wicket: delivery.getWickets()) {
+					if(!players.containsKey(wicket.getPlayer_out())) {
+						players.put(wicket.getPlayer_out(), new Score(new Double(0.0), false));
+					}
+				}
 			}
 		}
 	}
